@@ -419,6 +419,7 @@
   &:hover [data-slot="user-message-copy-wrapper"],
   &:focus-within [data-slot="user-message-copy-wrapper"],
   [data-slot="user-message-copy-wrapper"]:has([data-expanded]),
+  [data-slot="user-message-copy-wrapper"]:has([aria-pressed="true"]),
   &:hover [data-slot="user-message-meta-tail"],
   &:focus-within [data-slot="user-message-meta-tail"] {
     opacity: 1;
@@ -575,7 +576,8 @@
   }
 
   &:hover [data-slot="text-part-copy-wrapper"],
-  &:focus-within [data-slot="text-part-copy-wrapper"] {
+  &:focus-within [data-slot="text-part-copy-wrapper"],
+  [data-slot="text-part-copy-wrapper"]:has([aria-pressed="true"]) {
     opacity: 1;
     pointer-events: auto;
   }

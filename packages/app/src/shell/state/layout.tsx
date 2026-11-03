@@ -52,6 +52,8 @@ const DEFAULT_SESSION_WIDTH = 600
 
 const DEFAULT_DOCK_HEIGHT = 280
 
+const DEFAULT_PIN_WIDTH = 420
+
 export type LocalProject = Partial<Project> & { worktree: string }
 
 export type HomeProjectSelection = typeof layoutSchema.Type.home.selection
@@ -145,6 +147,9 @@ const sessionViewSchema = Persistence.struct({
   reviewOpen: Schema.optional(Persistence.array(Schema.String)),
   reviewMode: Schema.optional(Schema.Literals(["git", "branch", "turn"])),
   reviewFile: Schema.optional(Schema.String),
+  pinnedMessages: Schema.optional(Persistence.array(Schema.String)),
+  activePinnedMessage: Schema.optional(Schema.String),
+  pinWidth: Schema.optional(Schema.Finite),
 })
 
 export const layoutSchema = Persistence.struct({
@@ -613,6 +618,116 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             /** The user has dragged the divider, so the width is theirs rather than the default. */
             resized: createMemo(() => regions.sessionWidth() !== undefined),
             resize: regions.setSessionWidth,
+          },
+          pin: {
+            items: createMemo(() => store.sessionView[key()]?.pinnedMessages ?? []),
+            active: createMemo(() => {
+              const entry = store.sessionView[key()]
+              const items = entry?.pinnedMessages ?? []
+
+              if (items.length === 0) return undefined
+
+              return entry?.activePinnedMessage && items.includes(entry.activePinnedMessage)
+                ? entry.activePinnedMessage
+                : items.at(-1)
+            }),
+            width: createMemo(() => store.sessionView[key()]?.pinWidth ?? DEFAULT_PIN_WIDTH),
+            isPinned(messageID: string) {
+              return (store.sessionView[key()]?.pinnedMessages ?? []).includes(messageID)
+            },
+            select(messageID: string) {
+              const session = key()
+              touch(session)
+              const current = store.sessionView[session]
+
+              if (!current) return
+              setStore("sessionView", session, "activePinnedMessage", messageID)
+            },
+            toggle(messageID: string) {
+              const session = key()
+              touch(session)
+              const current = store.sessionView[session]
+
+              if (!current) {
+                setStore("sessionView", session, {
+                  scroll: {},
+                  pinnedMessages: [messageID],
+                  activePinnedMessage: messageID,
+                })
+                prune(selectActiveSessionKey(untrack(scopedState)) ?? session)
+
+                return
+              }
+
+              setStore(
+                "sessionView",
+                session,
+                produce((draft) => {
+                  const list = draft.pinnedMessages ? [...draft.pinnedMessages] : []
+                  const index = list.indexOf(messageID)
+
+                  if (index !== -1) {
+                    list.splice(index, 1)
+                    draft.pinnedMessages = list.length > 0 ? list : undefined
+
+                    if (draft.activePinnedMessage === messageID) {
+                      draft.activePinnedMessage = list.at(-1)
+                    }
+
+                    return
+                  }
+
+                  list.push(messageID)
+                  draft.pinnedMessages = list
+                  draft.activePinnedMessage = messageID
+                }),
+              )
+            },
+            remove(messageID: string) {
+              const session = key()
+              const current = store.sessionView[session]
+
+              if (!current?.pinnedMessages?.includes(messageID)) return
+              setStore(
+                "sessionView",
+                session,
+                produce((draft) => {
+                  const list = (draft.pinnedMessages ?? []).filter((id) => id !== messageID)
+                  draft.pinnedMessages = list.length > 0 ? list : undefined
+
+                  if (draft.activePinnedMessage === messageID) {
+                    draft.activePinnedMessage = list.at(-1)
+                  }
+                }),
+              )
+            },
+            clear() {
+              const session = key()
+              const current = store.sessionView[session]
+
+              if (!current?.pinnedMessages?.length) return
+              setStore(
+                "sessionView",
+                session,
+                produce((draft) => {
+                  delete draft.pinnedMessages
+                  delete draft.activePinnedMessage
+                }),
+              )
+            },
+            resize(width: number) {
+              const session = key()
+              const clamped = Math.max(280, Math.min(720, Math.round(width)))
+              const current = store.sessionView[session]
+
+              if (!current) {
+                setStore("sessionView", session, { scroll: {}, pinWidth: clamped })
+
+                return
+              }
+
+              setStore("sessionView", session, "pinWidth", clamped)
+            },
           },
         }
       },

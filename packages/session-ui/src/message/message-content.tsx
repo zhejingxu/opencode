@@ -111,10 +111,11 @@ function MetaItems(props: { items: MetaItem[]; slot: "user-message" | "text-part
 }
 
 function MessageActionButton(
-  props: Pick<ComponentProps<"button">, "disabled" | "onMouseDown" | "onClick" | "aria-label"> & {
-    icon: "check" | "copy" | "reset" | "fork" | "arrow-down-to-line" | "outline-trash"
+  props: Pick<ComponentProps<"button">, "disabled" | "onMouseDown" | "onClick" | "aria-label" | "aria-pressed"> & {
+    icon: "check" | "copy" | "reset" | "fork" | "arrow-down-to-line" | "outline-trash" | "pin" | "pin-active"
     label: JSX.Element
     size?: "small" | "normal"
+    active?: boolean
   },
 ) {
   const icon = () => (props.icon === "copy" ? "outline-copy" : props.icon)
@@ -125,10 +126,12 @@ function MessageActionButton(
         icon={<Icon name={icon()} size="small" />}
         size={props.size ?? "normal"}
         variant="ghost-muted"
+        state={props.active ? "pressed" : undefined}
         disabled={props.disabled}
         onMouseDown={props.onMouseDown}
         onClick={props.onClick}
         aria-label={props["aria-label"]}
+        aria-pressed={props["aria-pressed"]}
       />
     </Tooltip>
   )
@@ -422,6 +425,25 @@ export function CurrentUserMessageDisplay(props: {
             aria-label={i18n.t("ui.message.deletePending")}
           />
         </UserMessageTransition>
+      </Show>
+      <Show when={props.actions?.pin}>
+        {(pin) => (
+          <UserMessageTransition active={!pending()}>
+            <MessageActionButton
+              icon={pin().isPinned(props.message.id) ? "pin-active" : "pin"}
+              size="small"
+              active={pin().isPinned(props.message.id)}
+              label={pin().isPinned(props.message.id) ? i18n.t("ui.message.unpin") : i18n.t("ui.message.pin")}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.stopPropagation()
+                pin().toggle({ sessionID: props.sessionID, messageID: props.message.id })
+              }}
+              aria-label={pin().isPinned(props.message.id) ? i18n.t("ui.message.unpin") : i18n.t("ui.message.pin")}
+              aria-pressed={pin().isPinned(props.message.id)}
+            />
+          </UserMessageTransition>
+        )}
       </Show>
       <Show when={props.actions?.revert}>
         <UserMessageTransition active={!pending()}>
@@ -1106,6 +1128,8 @@ export function AssistantTextContent(props: {
   /** The finished turn's web searches and fetches, shown as a chip in its footer. */
   sources?: TurnSources
   onOpenSources?: () => void
+  pinned?: boolean
+  onTogglePin?: () => void
 }) {
   const data = useData()
   const i18n = useI18n()
@@ -1204,6 +1228,21 @@ export function AssistantTextContent(props: {
           onClick={() => copy.copy(props.text)}
           aria-label={copy.copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
         />
+        <Show when={props.onTogglePin}>
+          <MessageActionButton
+            icon={props.pinned ? "pin-active" : "pin"}
+            size="small"
+            active={props.pinned}
+            label={props.pinned ? i18n.t("ui.message.unpin") : i18n.t("ui.message.pin")}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => {
+              event.stopPropagation()
+              props.onTogglePin?.()
+            }}
+            aria-label={props.pinned ? i18n.t("ui.message.unpin") : i18n.t("ui.message.pin")}
+            aria-pressed={props.pinned}
+          />
+        </Show>
         <Show when={meta().length > 0}>
           <span data-slot="text-part-meta">
             <MetaItems items={meta()} slot="text-part" />

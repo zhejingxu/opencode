@@ -27,6 +27,10 @@ export function createSessionScreenLayout(
   const size = createSizing()
   const view = session.layout.view
   const tabsOpen = createMemo(() => session.isDesktop() && view().side.opened() && !!session.identity.params.id)
+  const pinOpen = createMemo(() => session.isDesktop() && view().pin.items().length > 0 && !!session.identity.params.id)
+  // The pinned panel sits left of the chat panel and takes its width plus the row gap out of the row.
+  const pinOffset = createMemo(() => (pinOpen() ? view().pin.width() + 8 : 0))
+  const withoutPin = (css: string) => (pinOpen() ? css.replaceAll("100%", `(100% - ${pinOffset()}px)`) : css)
 
   const sized = createMemo(() => {
     const entry = input.panel()
@@ -54,7 +58,7 @@ export function createSessionScreenLayout(
 
     if (width === undefined) return undefined
 
-    return width - 8
+    return Math.max(0, width - 8 - pinOffset())
   })
 
   const splitSide = createMemo(() => tabsOpen() && input.wide())
@@ -79,17 +83,22 @@ export function createSessionScreenLayout(
     })
   })
 
+  // The chat panel's width with the side panel closed: the whole row, less the pinned panel when it shows.
+  const fullWidth = createMemo(() => (pinOpen() ? `calc(100% - ${pinOffset()}px)` : "100%"))
+
   const panelWidth = createMemo(() => {
-    if (!tabsOpen()) return "100%"
+    if (!tabsOpen()) return fullWidth()
     const current = sized()
 
-    if (current) return sidePanelWidthCss(current.width)
+    if (current) return withoutPin(sidePanelWidthCss(current.width))
 
-    return sessionPanelWidthCss({
-      width: view().session.width(),
-      split: splitSide(),
-      resized: view().session.resized(),
-    })
+    return withoutPin(
+      sessionPanelWidthCss({
+        width: view().session.width(),
+        split: splitSide(),
+        resized: view().session.resized(),
+      }),
+    )
   })
 
   const panelMax = createMemo(() => {
@@ -117,7 +126,12 @@ export function createSessionScreenLayout(
 
   return {
     centered: createMemo(() => session.isDesktop()),
+    pin: {
+      open: pinOpen,
+      width: createMemo(() => view().pin.width()),
+    },
     panel: {
+      full: fullWidth,
       max: panelMax,
       ref: (element: HTMLDivElement) => {
         row = element

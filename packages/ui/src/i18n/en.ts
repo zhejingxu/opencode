@@ -289,6 +289,8 @@ const source = {
   "ui.message.deletePending": "Delete",
   "ui.message.copyResponse": "Copy response",
   "ui.message.copyOutput": "Copy output",
+  "ui.message.pin": "Pin to left",
+  "ui.message.unpin": "Unpin from left",
   "ui.message.copied": "Copied",
   "ui.message.thought": "Thought",
   "ui.message.duration.seconds": "{{count}}s",

@@ -41,6 +41,10 @@ export type SessionUserActions = {
   revert?: (input: { sessionID: string; messageID: string }) => Promise<void> | void
   /** Starts a new session with the history before this message and its prompt in the composer. */
   fork?: (input: { sessionID: string; messageID: string }) => Promise<void> | void
+  pin?: {
+    isPinned: (messageID: string) => boolean
+    toggle: (input: { sessionID: string; messageID: string }) => void
+  }
   /**
    * An input the server has not delivered yet. Like the TUI, a pending steer can move to the queue or be deleted;
    * it shows as waiting only while `steering` behind delivered work or `stranded` by an execution that ended.

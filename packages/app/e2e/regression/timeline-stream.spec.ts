@@ -3371,6 +3371,57 @@ test("reaches the quote action from the keyboard and blocks a selection over the
   await page.mouse.up()
 })
 
+test("pins a Q&A turn to the left panel and unpins it", async ({ page }) => {
+  const firstUser = userMessage([userText("Give me the implementation checklist", { id: "prt_pin_user_1" })], {
+    id: "msg_pin_user_1",
+    created: 1700000001000,
+  })
+
+  const firstAssistant = assistantMessage(
+    [{ id: "prt_pin_assistant_1", type: "text", text: "1. Design schema\n2. Wire UI\n3. Verify E2E" }],
+    {
+      id: "msg_pin_assistant_1",
+      parentID: "msg_pin_user_1",
+      created: 1700000002000,
+    },
+  )
+
+  const secondUser = userMessage([userText("Now let's work on item 1", { id: "prt_pin_user_2" })], {
+    id: "msg_pin_user_2",
+    created: 1700000003000,
+  })
+
+  const secondAssistant = assistantMessage(
+    [{ id: "prt_pin_assistant_2", type: "text", text: "Working on schema details." }],
+    {
+      id: "msg_pin_assistant_2",
+      parentID: "msg_pin_user_2",
+      created: 1700000004000,
+    },
+  )
+
+  await setupTimeline(page, {
+    viewport: { width: 1400, height: 900 },
+    messages: [firstUser, firstAssistant, secondUser, secondAssistant],
+  })
+
+  const pinnedPanel = page.locator('[data-component="session-pinned-panel"]')
+  await expect(pinnedPanel).toHaveCount(0)
+
+  const firstTurnResponse = page.locator('[data-timeline-part-id="msg_pin_assistant_1:text:0"]')
+  await firstTurnResponse.hover()
+  await firstTurnResponse.getByRole("button", { name: "Pin to left", exact: true }).click()
+
+  await expect(pinnedPanel).toBeVisible()
+  await expect(pinnedPanel.getByText("Give me the implementation checklist", { exact: true })).toBeVisible()
+  await expect(pinnedPanel.getByText("Design schema", { exact: true })).toBeVisible()
+  await expect(pinnedPanel.getByText("Wire UI", { exact: true })).toBeVisible()
+  await expect(pinnedPanel).not.toContainText("Working on schema details.")
+
+  await pinnedPanel.locator('[data-slot="session-pinned-header"]').getByRole("button", { name: "Unpin message", exact: true }).click()
+  await expect(pinnedPanel).toHaveCount(0)
+})
+
 function pauseExitAnimations(locator: Locator) {
   return locator.evaluateHandle((element) => {
     const animations: Animation[] = []

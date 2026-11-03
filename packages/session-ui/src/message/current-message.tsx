@@ -64,6 +64,8 @@ export function SessionAssistantContent(props: {
   turnTokensPerSecond?: number
   sources?: TurnSources
   onOpenSources?: () => void
+  pinned?: boolean
+  onTogglePin?: () => void
   defaultOpen?: boolean
   reasoningDefaultOpen?: boolean
   toolOpen?: boolean
@@ -83,6 +85,8 @@ export function SessionAssistantContent(props: {
             turnTokensPerSecond={props.turnTokensPerSecond}
             sources={props.sources}
             onOpenSources={props.onOpenSources}
+            pinned={props.pinned}
+            onTogglePin={props.onTogglePin}
           />
         )}
       </Match>

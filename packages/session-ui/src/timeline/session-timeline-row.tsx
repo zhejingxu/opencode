@@ -519,6 +519,16 @@ export function createSessionTimelineRowRenderer(input: {
                 turnTokensPerSecond={turnTokensPerSecond()}
                 sources={turnSourcesValue()}
                 onOpenSources={() => sourcesHost?.open(row().userMessageID)}
+                pinned={input.actions?.pin?.isPinned(row().userMessageID)}
+                onTogglePin={
+                  input.actions?.pin
+                    ? () =>
+                        input.actions?.pin?.toggle({
+                          sessionID: input.sessionID(),
+                          messageID: row().userMessageID,
+                        })
+                    : undefined
+                }
                 defaultOpen={defaultOpen()}
                 toolOpen={input.disclosure.value(disclosureKey()) ?? defaultOpen()}
                 onToolOpenChange={(open) => input.disclosure.set(disclosureKey(), open)}

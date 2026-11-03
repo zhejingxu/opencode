@@ -401,6 +401,10 @@ export function createActiveSessionRegion(input: {
           pending: pendingSteer,
           chooseModel: () => command.trigger("model.choose"),
           openAttachment,
+          pin: {
+            isPinned: (messageID: string) => input.session.layout.view().pin.isPinned(messageID),
+            toggle: ({ messageID }) => input.session.layout.view().pin.toggle(messageID),
+          },
         }),
     },
     requests: state,

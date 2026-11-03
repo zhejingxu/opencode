@@ -48,6 +48,7 @@ import { SessionHeaderDrag, windowDragEnabled } from "./header/drag-area"
 import { usePlatform } from "@/runtime/platform/platform"
 import { useServer } from "@/runtime/server/current"
 import { reviewGlyphFill, SessionReviewToggle } from "./header/session-header-actions"
+import { SessionPinnedPanel } from "./pinned-panel"
 import { createTimelineCache } from "./timeline/cache"
 import { createPanelMotion, holdLandingWidth, panelOpacity, setPanelResizing } from "@/shell/panel-motion"
 
@@ -196,14 +197,15 @@ function SessionScreenContent(props: {
 
       if (!chat) return
       const open = chatOpenWidth()
+      const full = screen.panel.full()
 
       if (closed === 1) {
-        chat.style.width = "100%"
+        chat.style.width = full
 
         return
       }
 
-      chat.style.width = closed === 0 ? open : `calc(${open} + (100% - ${open}) * ${closed})`
+      chat.style.width = closed === 0 ? open : `calc(${open} + (${full} - ${open}) * ${closed})`
     },
     element: () => sidePresence,
     distance: screen.side.width,
@@ -476,6 +478,28 @@ function SessionScreenContent(props: {
                   paintSideGlyph()
                 }}
               />
+            </div>
+          </Show>
+          <Show when={screen.pin.open() && messagesReady()}>
+            <div
+              data-slot="session-pinned-panel-container"
+              class="relative z-10 min-w-0 shrink-0 flex flex-col min-h-0 h-full"
+              style={{ width: `${screen.pin.width()}px` }}
+            >
+              <SessionPinnedPanel session={session} onRevealMessage={timeline.actions.revealMessage} />
+              <div onPointerDown={(event) => screen.size.start(event)}>
+                <ResizeHandle
+                  class="-end-1"
+                  direction="horizontal"
+                  size={screen.pin.width()}
+                  min={280}
+                  max={720}
+                  onResize={(width) => {
+                    screen.size.touch()
+                    session.layout.view().pin.resize(width)
+                  }}
+                />
+              </div>
             </div>
           </Show>
           <div

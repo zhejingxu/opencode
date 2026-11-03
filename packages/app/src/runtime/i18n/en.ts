@@ -355,6 +355,10 @@ export const dict = {
   "session.child.status.succeeded": "Done",
   "session.child.status.failed": "Failed",
   "session.child.status.interrupted": "Interrupted",
+  "session.pinned.title": "Pinned",
+  "session.pinned.jumpToMessage": "Jump to message in timeline",
+  "session.pinned.unpin": "Unpin message",
+  "session.pinned.clearAll": "Clear all pinned",
 
   "prompt.action.attachFile": "Add files",
 

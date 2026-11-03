@@ -218,6 +218,14 @@ const icons = {
     viewBox: "0 0 16 16",
     body: `<path d="M9.5 8.49927C10.8333 8.49927 12.1667 8.49927 13.5 8.49927C13.5 9.74927 13.5 11.2493 13.5 12.4993C12.1667 12.4993 10.8333 12.4993 9.5 12.4993V7C9.5 5 10.5 3.5 13 3.5001" stroke="currentColor"/><path d="M2.5 8.49927C3.83333 8.49927 5.16667 8.49927 6.5 8.49927C6.5 9.74927 6.5 11.2493 6.5 12.4993C5.16667 12.4993 3.83333 12.4993 2.5 12.4993V7C2.5 5 3.5 3.5 6 3.5001" stroke="currentColor"/>`,
   },
+  pin: {
+    viewBox: "0 0 16 16",
+    body: `<path d="M4.5 2.5H11.5M5.5 2.5V6.5L3.5 9V10.25H12.5V9L10.5 6.5V2.5M8 10.25V14.25" stroke="currentColor" stroke-linecap="square" stroke-linejoin="round"/>`,
+  },
+  "pin-active": {
+    viewBox: "0 0 16 16",
+    body: `<path d="M5.5 2.5H10.5V6.5L12.5 9V10.25H3.5V9L5.5 6.5V2.5Z" fill="currentColor" fill-opacity="0.22"/><path d="M4.5 2.5H11.5M5.5 2.5V6.5L3.5 9V10.25H12.5V9L10.5 6.5V2.5M8 10.25V14.25" stroke="currentColor" stroke-linecap="square" stroke-linejoin="round"/>`,
+  },
   "outline-arrow-left": {
     viewBox: "0 0 16 16",
     body: `<path d="M2.44442 7.99999H13.5555M6.22221 4.22222L2.44442 7.99999L6.22221 11.7778" stroke="currentColor"/>`,

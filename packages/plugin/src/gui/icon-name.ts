@@ -130,6 +130,8 @@ export type IconName =
   | "outline-xmark"
   | "pencil-line"
   | "photo"
+  | "pin"
+  | "pin-active"
   | "plus"
   | "plus-small"
   | "post-skill"
