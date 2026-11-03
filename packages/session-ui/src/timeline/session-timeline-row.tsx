@@ -320,7 +320,13 @@ export function createSessionTimelineRowRenderer(input: {
             return [{ type: "shell", id: ref.partID, render: () => <Shell messageID={ref.messageID} grouped /> }]
 
           if (message.type !== "assistant" && message.type !== "user")
-            return [{ type: "notice", id: ref.partID, render: () => <Notice messageID={ref.messageID} grouped /> }]
+            return [
+              {
+                type: "notice",
+                id: ref.partID,
+                render: () => <Notice messageID={ref.messageID} grouped onSizeChange={onSizeChange} />,
+              },
+            ]
 
           return []
         })
@@ -640,7 +646,7 @@ export function createSessionTimelineRowRenderer(input: {
     </div>
   )
 
-  function Notice(props: { messageID: string; grouped?: boolean }) {
+  function Notice(props: { messageID: string; grouped?: boolean; onSizeChange?: () => void }) {
     const inset = () => (props.grouped ? "" : padding())
     const message = createMemo(() => input.projection.messageByID().get(props.messageID))
 
@@ -749,7 +755,13 @@ export function createSessionTimelineRowRenderer(input: {
           {(message) => (
             <div data-slot="session-turn-message-container" class={`w-full ${inset()}`}>
               <div data-slot="session-turn-compaction">
-                <SessionCompactionMessage message={message()} error={compactionError()} />
+                <SessionCompactionMessage
+                  message={message()}
+                  error={compactionError()}
+                  open={input.disclosure.value(message().id)}
+                  onOpenChange={(open) => input.disclosure.set(message().id, open)}
+                  onContentRendered={props.onSizeChange}
+                />
               </div>
             </div>
           )}
@@ -1046,7 +1058,7 @@ export function createSessionTimelineRowRenderer(input: {
 
       return (
         <Frame row={current()}>
-          <Notice messageID={current().messageID} />
+          <Notice messageID={current().messageID} onSizeChange={onSizeChange} />
         </Frame>
       )
     }

@@ -2171,14 +2171,24 @@ function SessionSkillMessage(props: { message: Extract<SessionMessageInfo, { typ
 function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type: "compaction" }> }) {
   const ctx = use()
   const theme = useTheme()
+  const renderer = useRenderer()
   const { currentSyntax: syntax } = useThemes()
   const plugins = usePlugin()
+  const [expanded, setExpanded] = createSignal(false)
+  const [hover, setHover] = createSignal(false)
   const status = () => props.message.status
   const cancelled = () => props.message.status === "failed" && props.message.error.type === "aborted"
   const text = () =>
     props.message.status === "failed" ? (cancelled() ? "" : props.message.error.message) : props.message.summary
   const content = createMemo(() => text().trim())
-  const color = () => (status() === "failed" && !cancelled() ? theme.text.feedback.error.base : theme.text.muted)
+  const expandable = createMemo(() => status() !== "failed" && Boolean(content()))
+  const open = () => (status() === "failed" ? Boolean(content()) : expandable() && expanded())
+  const borderColor = () => (status() === "failed" && !cancelled() ? theme.text.feedback.error.base : theme.text.muted)
+  const color = () => {
+    if (status() === "failed" && !cancelled()) return theme.text.feedback.error.base
+    if (hover() && expandable()) return theme.text.base
+    return theme.text.muted
+  }
   // Usage of the compaction request itself; the resulting context size only shows on the next assistant step.
   const usage = () => {
     if (props.message.status === "running" || !props.message.tokens) return
@@ -2190,8 +2200,17 @@ function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type:
   }
   return (
     <box>
-      <box flexDirection="row" alignItems="center">
-        <box border={["top"]} borderColor={color()} flexGrow={1} />
+      <box
+        flexDirection="row"
+        alignItems="center"
+        onMouseOver={() => expandable() && setHover(true)}
+        onMouseOut={() => setHover(false)}
+        onMouseUp={() => {
+          if (!expandable() || renderer.getSelection()?.getSelectedText()) return
+          setExpanded((value) => !value)
+        }}
+      >
+        <box border={["top"]} borderColor={borderColor()} flexGrow={1} />
         <box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1}>
           <Switch>
             <Match when={status() === "running"}>
@@ -2203,10 +2222,15 @@ function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type:
               <text fg={color()}>✗</text>
             </Match>
           </Switch>
+          <Show when={expandable()}>
+            <text fg={color()}>{expanded() ? "−" : "+"}</text>
+          </Show>
           <text fg={color()}>
             {props.message.status === "completed" && props.message.native?.messages
               ? "Provider compaction"
-              : "Compaction"}
+              : status() === "running"
+                ? "Compacting"
+                : "Compaction"}
           </text>
           <Show when={cancelled()}>
             <text fg={color()}>· cancelled</text>
@@ -2215,21 +2239,28 @@ function CompactionMessage(props: { message: Extract<SessionMessageInfo, { type:
             <text fg={color()}>· {usage()}</text>
           </Show>
         </box>
-        <box border={["top"]} borderColor={color()} flexGrow={1} />
+        <box border={["top"]} borderColor={borderColor()} flexGrow={1} />
       </box>
-      <Show when={content()}>
+      <Show when={open()}>
         <box paddingTop={1} paddingLeft={3}>
-          <markdown
-            syntaxStyle={syntax()}
-            renderNode={plugins.markdown()}
-            streaming={true}
-            internalBlockMode="top-level"
-            content={content()}
-            tableOptions={{ style: "grid", cellPaddingX: 1 }}
-            conceal={ctx.markdownMode() === "rendered"}
-            fg={theme.markdown.text}
-            bg={theme.background.base}
-          />
+          <box
+            border={expandable() ? ["left"] : undefined}
+            customBorderChars={SplitBorder.customBorderChars}
+            borderColor={theme.border.base}
+            paddingLeft={expandable() ? 1 : 0}
+          >
+            <markdown
+              syntaxStyle={syntax()}
+              renderNode={plugins.markdown()}
+              streaming={true}
+              internalBlockMode="top-level"
+              content={content()}
+              tableOptions={{ style: "grid", cellPaddingX: 1 }}
+              conceal={ctx.markdownMode() === "rendered"}
+              fg={theme.markdown.text}
+              bg={theme.background.base}
+            />
+          </box>
         </box>
       </Show>
     </box>

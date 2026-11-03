@@ -551,7 +551,7 @@ export const CompactionFailed = {
   render: () => (
     <CurrentSessionTimelineStory
       title="Compaction failed"
-      description="A failed compaction keeps the production divider and shows the provider error."
+      description="A failed compaction row shows the failure outcome and provider error."
       document={compactionFailedDocument}
       width="600px"
       backgroundCompaction
@@ -563,7 +563,7 @@ export const CompactionCancelled = {
   render: () => (
     <CurrentSessionTimelineStory
       title="Compaction cancelled"
-      description="An interrupted compaction keeps the production divider without an empty error block."
+      description="An interrupted compaction row shows the cancelled outcome without an empty error block."
       document={compactionCancelledDocument}
       width="600px"
       backgroundCompaction

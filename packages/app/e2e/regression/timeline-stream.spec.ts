@@ -1564,30 +1564,33 @@ test.describe("compaction", () => {
 
     await timeline.send(compactionStarted({ sessionID, reason: "manual", recent: "" }))
     const compaction = page.locator('[data-component="session-compaction-message"]')
-    await expect(compaction.getByText("Session compaction started", { exact: true })).toBeVisible()
-    await expect(compaction.getByRole("status").getByLabel("Compacting", { exact: true })).toBeVisible()
+    const trigger = compaction.locator('[data-slot="collapsible-trigger"]')
+    const running = compaction.getByRole("status").getByLabel("Compacting", { exact: true })
+    await expect(running).toBeVisible()
     await expect(compaction.locator('[data-component="text-shimmer"]')).toHaveAttribute("data-active", "true")
+    await expect(compaction.locator('[data-slot="collapsible-arrow"]')).toHaveCount(0)
     await expect(compaction.getByText("Session compacted", { exact: true })).toHaveCount(0)
     await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible()
     await expect(page.locator('[data-component="session-working"]')).toHaveCount(0)
 
     await page.setViewportSize({ width: 480, height: 900 })
-    await expect(compaction.getByText("Session compaction started", { exact: true })).toBeInViewport()
+    await expect(running).toBeInViewport()
 
     await timeline.send(compactionDelta({ sessionID, text: "## Checkpoint\n\nStreamed implementation details." }))
+    await expect(trigger).toHaveAttribute("aria-expanded", "false")
+    await expect(compaction.locator('[data-slot="basic-tool-tool-subtitle"]')).toHaveText("Checkpoint")
+    await expect(compaction).not.toContainText("Streamed implementation details.")
+    await expect(running).toBeVisible()
+    await expect(compaction.getByText("Session compacted", { exact: true })).toHaveCount(0)
+
+    await trigger.click()
+    await expect(trigger).toHaveAttribute("aria-expanded", "true")
     await expect(compaction.getByRole("heading", { name: "Checkpoint" })).toBeVisible()
     await expect(compaction).toContainText("Streamed implementation details.")
-    const running = compaction.getByRole("status").getByLabel("Compacting", { exact: true })
-    await expect(running).toBeVisible()
-    await expect
-      .poll(async () => {
-        const summary = await compaction.locator('[data-component="text-part"]').boundingBox()
-        const status = await running.boundingBox()
 
-        return !!summary && !!status && status.y >= summary.y + summary.height
-      })
-      .toBe(true)
-    await expect(compaction.getByText("Session compacted", { exact: true })).toHaveCount(0)
+    await trigger.click()
+    await expect(trigger).toHaveAttribute("aria-expanded", "false")
+    await expect(compaction).not.toContainText("Streamed implementation details.")
 
     await timeline.send(
       compactionEnded({
@@ -1597,21 +1600,17 @@ test.describe("compaction", () => {
         recent: "",
       }),
     )
-    await expect(compaction).toContainText("Final implementation details.")
-    await expect(compaction).not.toContainText("Streamed implementation details.")
-    await expect(compaction.getByText("Session compaction started", { exact: true })).toBeVisible()
     await expect(compaction.getByText("Session compacted", { exact: true })).toBeVisible()
-    await expect
-      .poll(async () => {
-        const summary = await compaction.locator('[data-component="text-part"]').boundingBox()
-        const done = await compaction.getByText("Session compacted", { exact: true }).boundingBox()
-
-        return !!summary && !!done && done.y >= summary.y + summary.height
-      })
-      .toBe(true)
+    await expect(trigger).toHaveAttribute("aria-expanded", "false")
+    await expect(compaction).not.toContainText("Final implementation details.")
     await expect(compaction.getByRole("status")).toHaveCount(0)
     await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible()
     await expect(page.locator('[data-component="session-working"]')).toBeVisible()
+
+    await trigger.click()
+    await expect(trigger).toHaveAttribute("aria-expanded", "true")
+    await expect(compaction).toContainText("Final implementation details.")
+    await expect(compaction).not.toContainText("Streamed implementation details.")
   })
 
   test("shows an automatic compaction as one quiet divider with background compaction on", async ({ page }) => {
@@ -1688,6 +1687,11 @@ test.describe("compaction", () => {
         await timeline.send(compactionDelta({ sessionID, text: outcome.partial }))
         await expect(compactions).toHaveCount(index + 1)
         const compaction = compactions.nth(index)
+        const trigger = compaction.locator('[data-slot="collapsible-trigger"]')
+        await expect(trigger).toHaveAttribute("aria-expanded", "false")
+        await expect(compaction).not.toContainText(outcome.partial)
+        await trigger.click()
+        await expect(trigger).toHaveAttribute("aria-expanded", "true")
         await expect(compaction).toContainText(outcome.partial)
 
         if (name === "interrupted") {
@@ -1711,13 +1715,13 @@ test.describe("compaction", () => {
       for (const [index, name] of names.entries()) {
         const outcome = outcomes[name]
         const compaction = compactions.nth(index)
-        await expect(compaction.getByText("Session compaction started", { exact: true })).toBeVisible()
         await expect(compaction.getByText(outcome.label, { exact: true })).toBeVisible()
 
         for (const other of labels.filter((label) => label !== outcome.label))
           await expect(compaction.getByText(other, { exact: true })).toHaveCount(0)
         await expect(compaction.getByText("Session compacted", { exact: true })).toHaveCount(0)
         await expect(compaction.getByRole("status")).toHaveCount(0)
+        await expect(compaction.locator('[data-slot="collapsible-arrow"]')).toHaveCount(0)
         await expect(compaction).not.toContainText(outcome.partial)
 
         if (outcome.shown) await expect(compaction.getByText(outcome.shown, { exact: true })).toBeVisible()

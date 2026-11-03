@@ -663,11 +663,16 @@ test.each([80, 120])("completes custom Markdown and ordinary fences in a session
       frame.includes("DiagramStart") &&
       frame.includes("DiagramEnd") &&
       frame.includes("x\u00b2") &&
-      frame.includes("y\u00b2"),
+      frame.includes("Compaction"),
   )
-  expect(streaming).toContain("Compaction")
+  expect(streaming).not.toContain("y\u00b2")
   expect(streaming).not.toContain("initial final")
   expect(streaming).not.toContain("MARKDOWN_END")
+
+  const lines = streaming.split("\n")
+  const compactionRow = lines.findIndex((line) => line.includes("Compaction"))
+  await setup.mockMouse.click(lines[compactionRow]!.indexOf("Compaction") + 1, compactionRow)
+  await setup.waitForFrame((frame) => frame.includes("y\u00b2"))
 
   // Queue final text and completion together to exercise TextPart's reactive property order.
   setup.events.emit({
