@@ -31,6 +31,7 @@ import { Tooltip } from "@opencode/ui/tooltip"
 import { TextInput } from "@opencode/ui/text-input"
 import { ModelTooltip } from "./tooltip"
 import { ModelDetails } from "./details"
+import { createModelHealth, ModelHealthIndicator } from "./health"
 import { useLanguage } from "@/runtime/i18n/language"
 import { ExternalLink } from "@/runtime/platform/external-link"
 import { useData } from "@/runtime/server/current"
@@ -106,6 +107,7 @@ const ModelList: Component<{
 }> = (props) => {
   const language = useLanguage()
   const usage = createModelUsage({ refresh: true })
+  const health = createModelHealth()
 
   const controller = createModelSelectorController({
     model: props.model,
@@ -144,6 +146,11 @@ const ModelList: Component<{
         .flatMap((item) => item.items)
     })
   }
+
+  createEffect(() => {
+    if (props.mobile && !props.open) return
+    void health.checkAll(visibleModels())
+  })
 
   let scrollRef: HTMLDivElement | undefined
 
@@ -202,6 +209,10 @@ const ModelList: Component<{
             >
               <div data-slot="settings-row-copy">
                 <div data-slot="settings-row-title" class="flex items-center gap-2">
+                  <ModelHealthIndicator
+                    result={health.result(item.provider.id, item.id)}
+                    pending={health.pending(item.provider.id, item.id)}
+                  />
                   <Tooltip
                     inactive={props.mobile}
                     placement="right-start"
@@ -234,6 +245,16 @@ const ModelList: Component<{
 
   return (
     <div class="flex min-h-0 flex-1 flex-col">
+      <Show when={health.supported()}>
+        <Button
+          variant="ghost"
+          disabled={health.checking() || !visibleModels().length}
+          title={language.t("model.health.cost")}
+          onClick={() => void health.checkAll(visibleModels(), { force: true })}
+        >
+          {language.t(health.checking() ? "model.health.checking" : "model.health.check")}
+        </Button>
+      </Show>
       <div data-slot="model-selector-search" class="shrink-0 pt-px pb-3" classList={{ "px-4": !props.mobile }}>
         <TextInput
           type="search"
@@ -639,6 +660,7 @@ export function DialogSelectModel(props: { provider?: string; model?: ModelState
   const labels = createProviderLabels(controller.all)
   const chatgptPlan = createChatgptPlan(controller.current)
   const usage = createModelUsage({ refresh: true })
+  const health = createModelHealth()
 
   // `navigated`: the arrows have moved through the results since the query last changed.
   const [query, setQuery] = createStore({ search: "", navigated: false })
@@ -669,6 +691,19 @@ export function DialogSelectModel(props: { provider?: string; model?: ModelState
   )
 
   const rowItem = (id: string) => rows().find((row) => row.id === id)?.item
+
+  // Probes run on request only: opening the dialog checks the listed models whose results expired.
+  createEffect(() => void health.checkAll(rows().map((row) => row.item)))
+
+  const check = () => {
+    const item = list?.active()?.item ?? rows().find((row) => row.id === controller.current())?.item
+
+    if (item) void health.check(item.provider.id, item.id, { force: true })
+    void health.checkAll(
+      rows().map((row) => row.item),
+      { force: true },
+    )
+  }
   const flyoutId = createMemo(() => selectFlyoutOpenId(flyout()))
 
   const flyoutItem = () => {
@@ -950,6 +985,10 @@ export function DialogSelectModel(props: { provider?: string; model?: ModelState
           </Show>
         </span>
         <span data-slot="model-dialog-name">
+          <ModelHealthIndicator
+            result={health.result(item().provider.id, item().id)}
+            pending={health.pending(item().provider.id, item().id)}
+          />
           <span class="min-w-0 truncate">
             <SearchHighlight text={item().name} />
           </span>
@@ -1009,6 +1048,22 @@ export function DialogSelectModel(props: { provider?: string; model?: ModelState
             placeholder={language.t("dialog.model.search.placeholder")}
             trailing={
               <>
+                <Show when={health.supported()}>
+                  <Tooltip
+                    placement="top"
+                    gutter={4}
+                    value={`${language.t(health.checking() ? "model.health.checking" : "model.health.checkHighlighted")} · ${language.t("model.health.cost")}`}
+                    ignoreSafeArea={false}
+                  >
+                    <IconButton
+                      variant="ghost-muted"
+                      icon={<Icon name="refresh" size="small" />}
+                      aria-label={language.t("model.health.checkHighlighted")}
+                      disabled={health.checking() || rows().length === 0}
+                      onClick={check}
+                    />
+                  </Tooltip>
+                </Show>
                 <Tooltip
                   placement="top"
                   gutter={4}

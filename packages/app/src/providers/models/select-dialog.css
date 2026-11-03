@@ -243,3 +243,37 @@
     user-select: none;
   }
 }
+
+.model-health-indicator {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--v2-icon-icon-faint);
+
+  &[data-status="checking"] {
+    background: var(--v2-icon-icon-muted);
+    animation: model-health-pulse 1.2s ease-in-out infinite;
+  }
+
+  &[data-status="available"] {
+    background: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.18);
+  }
+
+  &[data-status="unavailable"] {
+    background: #dc2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.18);
+  }
+}
+
+@keyframes model-health-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
