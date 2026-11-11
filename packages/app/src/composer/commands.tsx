@@ -19,7 +19,42 @@ const withCategory = (category: string) => {
   })
 }
 
-export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
+export type ModelSelected = { providerID: string; modelID: string; variant?: string }
+
+/** The same selection, also reporting each model or variant the user picks, e.g. to apply it to a subagent session. */
+export function observeModelSelection(model: ModelSelection, onSelected: (selection: ModelSelected) => void) {
+  const report = () => {
+    const current = model.current()
+
+    if (current) onSelected({ providerID: current.provider.id, modelID: current.id, variant: model.variant.current() })
+  }
+
+  return {
+    ...model,
+    set(item, options) {
+      model.set(item, options)
+      if (item) report()
+    },
+    variant: {
+      ...model.variant,
+      set(value) {
+        model.variant.set(value)
+        report()
+      },
+      cycle() {
+        model.variant.cycle()
+        report()
+      },
+    },
+  } satisfies ModelSelection
+}
+
+export const useComposerCommands = (
+  input: {
+    model?: ModelSelection
+    onModelSelected?: (selection: ModelSelected) => void
+  } = {},
+) => {
   const command = useCommand()
   const dialog = useDialog()
   const language = useLanguage()
@@ -65,9 +100,11 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
       .finally(() => toaster.dismiss(pending))
   }
 
+  const selection = input.onModelSelected ? observeModelSelection(model, input.onModelSelected) : model
+
   const chooseModel = () => {
     sessionOwnership.capture().run(() => {
-      void dialog.show(() => <DialogSelectModel model={model} />)
+      void dialog.show(() => <DialogSelectModel model={selection} />)
     })
   }
 
@@ -104,7 +141,7 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
       title: language.t("command.model.variant.cycle"),
       description: language.t("command.model.variant.cycle.description"),
       keybind: "shift+mod+d",
-      onSelect: () => model.variant.cycle(),
+      onSelect: () => selection.variant.cycle(),
     }),
     viewCommand({
       id: "usage.view",

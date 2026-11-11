@@ -18,10 +18,31 @@ export function SubagentBar(props: {
   status?: SubagentStatus
   started: number
   ended?: number
+  onChooseModel?: () => void
   onBack: () => void
 }) {
   const language = useLanguage()
   const [now, setNow] = createSignal(Date.now())
+
+  const modelContent = (model: () => NonNullable<typeof props.model>) => (
+    <>
+      <Show when={model().provider}>
+        <span class="shrink-0">{model().provider}</span>
+        <Slash gap={4} />
+        <span class="sr-only">{" / "}</span>
+      </Show>
+      <span class="truncate">{model().name}</span>
+      {/* Like the message metadata: the variant follows the name, dimmer, with no separator. */}
+      <Show when={model().variant !== "default" && model().variant}>
+        {(variant) => (
+          <>
+            <span class="sr-only">{" "}</span>
+            <span class="ms-1 shrink-0 capitalize opacity-[0.66]">{variant()}</span>
+          </>
+        )}
+      </Show>
+    </>
+  )
 
   // Only what is known shows, with one separator between neighbours.
   const parts = () => [
@@ -81,23 +102,28 @@ export function SubagentBar(props: {
                 </Match>
                 <Match when={part === "model" && props.model}>
                   {(model) => (
-                    <span data-slot="subagent-model" class="flex min-w-0">
-                      <Show when={model().provider}>
-                        <span class="shrink-0">{model().provider}</span>
-                        <Slash gap={4} />
-                        <span class="sr-only">{" / "}</span>
-                      </Show>
-                      <span class="truncate">{model().name}</span>
-                      {/* Like the message metadata: the variant follows the name, dimmer, with no separator. */}
-                      <Show when={model().variant !== "default" && model().variant}>
-                        {(variant) => (
-                          <>
-                            <span class="sr-only">{" "}</span>
-                            <span class="ms-1 shrink-0 capitalize opacity-[0.66]">{variant()}</span>
-                          </>
-                        )}
-                      </Show>
-                    </span>
+                    <Show
+                      when={props.onChooseModel}
+                      fallback={
+                        <span data-slot="subagent-model" class="flex min-w-0">
+                          {modelContent(model)}
+                        </span>
+                      }
+                    >
+                      {(choose) => (
+                        <button
+                          type="button"
+                          data-slot="subagent-model"
+                          aria-label={language.t("command.model.choose")}
+                          title={language.t("command.model.choose")}
+                          class="-mx-1 flex min-w-0 items-center rounded px-1 py-0.5 text-inherit transition-colors hover:bg-v2-overlay-simple-overlay-hover hover:text-v2-text-text-base focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:text-v2-text-text-base focus-visible:outline-none"
+                          onClick={() => choose()()}
+                        >
+                          {modelContent(model)}
+                          <Icon name="chevron-down" size="small" class="-mr-0.5 ml-0.5 shrink-0 opacity-70" />
+                        </button>
+                      )}
+                    </Show>
                   )}
                 </Match>
               </Switch>

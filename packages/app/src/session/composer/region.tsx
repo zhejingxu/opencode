@@ -26,7 +26,8 @@ import type { QuoteSource } from "@/composer/quote-source"
 import type { ComposerQuoteAnchor } from "@opencode/plugin/gui"
 import { useWorkspaceLocation } from "@/workspaces/location"
 import { requireServerKey, sessionHref } from "@/shell/routes/session"
-import { useComposerCommands } from "@/composer/commands"
+import { useComposerCommands, observeModelSelection, type ModelSelected } from "@/composer/commands"
+import { DialogSelectModel } from "@/providers/models/select-dialog"
 import { useSessionCommands } from "../commands/use-session-commands"
 import type { SessionModel } from "../model"
 import type { SessionScreenLayout } from "../screen-layout"
@@ -303,7 +304,12 @@ export function createActiveSessionRegion(input: {
       server.api.session.inbox.cancel({ sessionID, inboxID: messageID }).then(() => undefined, notifyFailed),
   }
 
-  useComposerCommands()
+  useComposerCommands({
+    onModelSelected: (selection) => {
+      const id = input.session.data.info()?.id
+      if (id && input.session.data.isChild()) switchSessionModel(server, language, id, selection)
+    },
+  })
   useSessionCommands({
     session: input.session,
     region: input.region,
@@ -422,6 +428,8 @@ export function ActiveSessionComposerRegion(props: {
   suggestionBoundary: () => HTMLElement | undefined
   onReveal: (target: string) => void
 }) {
+  const dialog = useDialog()
+  const local = useLocal()
   const location = useWorkspaceLocation()
   const data = useData()
   const server = useServerSDK()
@@ -563,6 +571,21 @@ export function ActiveSessionComposerRegion(props: {
     return props.session.data.info()?.outcome
   }
 
+  // Opened from this bar rather than the global `model.choose` command, whose newest registration may belong to
+  // another screen: the choice applies to the subagent session shown here.
+  const chooseSubagentModel = () => {
+    const sessionID = props.session.data.info()?.id
+
+    if (!sessionID) return
+    void dialog.show(() => (
+      <DialogSelectModel
+        model={observeModelSelection(local.model, (selection) =>
+          switchSessionModel(server, language, sessionID, selection),
+        )}
+      />
+    ))
+  }
+
   return (
     <SessionComposerRegion
       controller={props.model.region}
@@ -575,6 +598,7 @@ export function ActiveSessionComposerRegion(props: {
               status={subagentStatus()}
               started={info().time.created}
               ended={subagentStatus() === "running" ? undefined : (info().time.idle ?? info().time.updated)}
+              onChooseModel={chooseSubagentModel}
               onBack={props.model.region.openParent}
             />
           )}
@@ -633,4 +657,23 @@ export function ActiveSessionComposerRegion(props: {
       }
     />
   )
+}
+
+function switchSessionModel(
+  server: ReturnType<typeof useServerSDK>,
+  language: ReturnType<typeof useLanguage>,
+  sessionID: string,
+  selection: ModelSelected,
+) {
+  void server.api.session
+    .switchModel({
+      sessionID,
+      model: { id: selection.modelID, providerID: selection.providerID, variant: selection.variant },
+    })
+    .catch((error) =>
+      showToast({
+        title: language.t("common.requestFailed"),
+        description: errorMessage(error, language.t("common.requestFailed")),
+      }),
+    )
 }
