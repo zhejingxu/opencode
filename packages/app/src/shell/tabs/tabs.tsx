@@ -474,7 +474,7 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
           setStore(
             produce((tabs) => {
               if (tabs.some((item) => tabKey(item) === tabKey(next))) return
-              tabs.push(next)
+              tabs.unshift(next)
             }),
           )
         })
@@ -512,7 +512,7 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
           preview.clear()
           setStore(
             produce((tabs) => {
-              tabs.push(tab)
+              tabs.unshift(tab)
             }),
           )
           navigate(draftHref(draftID))
